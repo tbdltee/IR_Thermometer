@@ -28,12 +28,28 @@ The code is for Arduino, consists of 4 main parts:
 * Device will goto deepsleep if no button is press for 10 sec. 
 
 ## How to use:
+* Point device to the object with range 1-3 cm. Long-press to measure.
 * Device in sleep mode:
   * Single-Click: Wakeup device.
   * Long-Click:   Measure temp
 * Device in normal mode:
   * Single-Click: Change profile (Emissivity)
   * Long-Click:   Measure temp 
+
+## Schematic
+![ContactlessThermometerImage](Schematic.png)
+
+## Bill Of Materials
+
+ ID | Description | Quantity
+--- | ----------- | --------
+  1 | Arduino Pro-Mini 3.3v 8MHz | 1
+  2 | push Button Switch | 1
+  3 | OLED Display Module 128X64 0.96" | 1
+  4 | GY-906 MLX90614ESF Contactless IR Temp Module | 1
+  5 | Active Buzzer | 1
+  6 | 16340 Battery Holder | 1
+  7 | 16340 LiPo 3.7v Battery | 1
 
 ## Author
 Teerapong S. –  [tbdltee@gmail.com]

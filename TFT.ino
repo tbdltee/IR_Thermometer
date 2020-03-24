@@ -4,15 +4,17 @@
 #define TFT_RST           9           // RST,      Reset
 #define TFT_LED           A3          // LED,      Brightness
 
-// ==================== TFT Color definitions ====================
-#define BLACK             0x0000
-#define BLUE              0x001F
-#define RED               0xF800
-#define GREEN             0x07E0
-#define CYAN              0x07FF
-#define MAGENTA           0xF81F
-#define YELLOW            0xFFE0
-#define WHITE             0xFFFF
+#define TEMPC_XPOS        76
+#define TEMPC_YPOS        50
+#define MTEMPC_XPOS       24
+#define MTEMPC_YPOS       24
+#define SCAN_XPOS         112
+#define SCAN_YPOS         28
+
+#define E_XPOS            5
+#define E_YPOS            50
+#define BATT_XPOS         102
+#define BATT_YPOS         4
 
 // ==================== TFT definitions ====================
 TFT_ST7735 TFTdisp = TFT_ST7735 (TFT_CS, TFT_DC, TFT_RST);
@@ -36,79 +38,82 @@ void init_TFT (void) {
   TFTdisp.setRotation(3);
   TFTdisp.setTextScale(1);                                  // set the font scaling to 1
   TFTdisp.clearScreen ();                                   // clear all screen
-  TFTdisp.fillRect (0, 0, 160, 15, GREEN);                  // draw rectangle (x, y, width, height, background_color)
-  TFTdisp.setTextColor(BLACK);                              // set the font color to black
-  TFTdisp.setCursor (2, 4);
-  TFTdisp.print(F("Digital Thermometer"));
   TFTdisp.backlight (false);                                // turn-on LED backlight
   TFTdisp.setTextColor(WHITE);                              // set the font color to WHITE
+  TFTdisp.drawRect (0, 0, 128, 64, WHITE);
 }
 
 void drawMainScreen (void) {
   TFTdisp.setTextScale(2);
-  TFTdisp.setCursor (3, 27);   TFTdisp.print ("T:");
-  TFTdisp.setCursor (110, 27); TFTdisp.print ("C");
-  TFTdisp.fillRect (81, 37, 3, 3, WHITE);
-  TFTdisp.setCursor (110, 47); TFTdisp.print ("C");
+  TFTdisp.setCursor (MTEMPC_XPOS+66, MTEMPC_YPOS); TFTdisp.print ("C");          // hold tempC
+  TFTdisp.setCursor (MTEMPC_XPOS+12, MTEMPC_YPOS); TFTdisp.print ("--");
+  TFTdisp.setCursor (MTEMPC_XPOS+44, MTEMPC_YPOS); TFTdisp.print ("-");
+  TFTdisp.fillRect (MTEMPC_XPOS+37, MTEMPC_YPOS+7, 3, 3, WHITE);
   TFTdisp.setTextScale(1);
-  TFTdisp.setCursor (102, 27); TFTdisp.print ("o");
-  TFTdisp.setCursor (102, 47); TFTdisp.print ("o");
-  TFTdisp.setCursor (3, 67); TFTdisp.print ("E:");
-  InitdrawTempC();
+  TFTdisp.setCursor (MTEMPC_XPOS+58, MTEMPC_YPOS); TFTdisp.print ("o");
+  
+  TFTdisp.setCursor (TEMPC_XPOS+38, TEMPC_YPOS);     TFTdisp.print ("C");         // tempC
+  TFTdisp.setCursor (TEMPC_XPOS+32, TEMPC_YPOS-3); TFTdisp.print ("o");
+  TFTdisp.setCursor (TEMPC_XPOS+6, TEMPC_YPOS);          TFTdisp.print ("--");
+  TFTdisp.setCursor (TEMPC_XPOS+19, TEMPC_YPOS);     TFTdisp.print (".");
+  TFTdisp.setCursor (TEMPC_XPOS+22, TEMPC_YPOS);     TFTdisp.print ("-");
+  
+  TFTdisp.setCursor (E_XPOS, E_YPOS); TFTdisp.print ("E:");
+  TFTdisp.setCursor (BATT_XPOS, BATT_YPOS); TFTdisp.print ("B");
+  TFTdisp.drawRect (BATT_XPOS+8, BATT_YPOS+1, 10, 6, WHITE);
+  TFTdisp.drawRect (BATT_XPOS+18, BATT_YPOS+3, 2, 2, WHITE);
+}
+
+void drawBattvalue (void) {
+  TFTdisp.fillRect (BATT_XPOS+9, BATT_YPOS+2, 8, 4, BLACK);
+  if (sys.Battlvl == 3) {
+    TFTdisp.fillRect (BATT_XPOS+9, BATT_YPOS+2, 8, 4, WHITE);
+  } else if (sys.Battlvl == 2) {
+    TFTdisp.fillRect (BATT_XPOS+9, BATT_YPOS+2, 6, 4, WHITE);
+  } else if (sys.Battlvl == 1) {
+    TFTdisp.fillRect (BATT_XPOS+9, BATT_YPOS+2, 4, 4, WHITE);
+  } else {
+    TFTdisp.fillRect (BATT_XPOS+9, BATT_YPOS+2, 2, 4, WHITE);
+  }
 }
 
 void drawEvalue (void) {
   String txt = "";
-  TFTdisp.setTextScale(1);
   if (sys.Eidx == 0) {
     txt = "body";
   } else if (sys.Eidx == 1) {
     txt = "water/food";
   }
-  TFTdisp.fillRect (15, 66, 80, 9, BLACK);
-  TFTdisp.setCursor (15, 67); TFTdisp.print (txt);
+  TFTdisp.fillRect (E_XPOS+12, E_YPOS-1, 56, 9, BLACK);
+  TFTdisp.setCursor (E_XPOS+12, E_YPOS); TFTdisp.print (txt);
 }
 
 void drawTempC (void) {
   if (data.T == 0xFFFF) return;
-  TFTdisp.setTextScale(2);
   String txt1 = "   " + String(data.T/10);
          txt1 = txt1.substring(txt1.length() - 3);
   String txt2 = String(data.T%10);
   for (uint8_t i=0; i<3; i++) {
     if (disp.tempC1[i] != txt1.charAt(i)) {
       disp.tempC1[i] = txt1.charAt(i);
-      TFTdisp.fillRect (43+(i*12), 26, 12, 15, BLACK);
-      TFTdisp.setCursor (44+(i*12), 27);
+      TFTdisp.fillRect (TEMPC_XPOS+(i*6), TEMPC_YPOS-1, 6, 9, BLACK);
+      TFTdisp.setCursor (TEMPC_XPOS+(i*6), TEMPC_YPOS);
       TFTdisp.print (disp.tempC1[i]);
     }
   }
   if (disp.tempC1[3] != txt2.charAt(0)) {
     disp.tempC1[3] = txt2.charAt(0);
-    TFTdisp.fillRect (87, 26, 12, 15, BLACK);
-    TFTdisp.setCursor (88, 27);
+    TFTdisp.fillRect (TEMPC_XPOS+22, TEMPC_YPOS-1, 6, 9, BLACK);
+    TFTdisp.setCursor (TEMPC_XPOS+22, TEMPC_YPOS);
     TFTdisp.print (disp.tempC1[3]);
   }
 }
 
-void InitdrawTempC (void) {
-  TFTdisp.setTextScale(2);
-  TFTdisp.fillRect (43, 26, 12, 15, BLACK);
-  TFTdisp.setCursor (55, 27);
-  TFTdisp.print ("--");
-  TFTdisp.fillRect (87, 26, 12, 15, BLACK);
-  TFTdisp.setCursor (88, 27);
-  TFTdisp.print ("-");
-}
-
-void initdrawMeasureTempC (void) {
-  TFTdisp.fillRect (81, 57, 3, 3, WHITE);
-}
-
 void ClrdrawMeasureTempC (void) {
-  strcpy(disp.tempC2, "    ");
-  TFTdisp.fillRect (43, 46, 56, 15, BLACK);
-  TFTdisp.fillCircle (130, 54, 5, BLACK);
+  strcpy(disp.tempC2, " ---");
+  TFTdisp.fillRect (MTEMPC_XPOS-1, MTEMPC_YPOS-1, 56, 15, BLACK);
+  TFTdisp.fillRect (MTEMPC_XPOS+37, MTEMPC_YPOS+10, 3, 3, WHITE);
+  TFTdisp.fillCircle (SCAN_XPOS, SCAN_YPOS, 5, BLACK);
 }
 
 void drawMeasureTempC (uint16_t tempC, uint16_t color) {
@@ -120,41 +125,19 @@ void drawMeasureTempC (uint16_t tempC, uint16_t color) {
   for (uint8_t i=0; i<3; i++) {
     if (disp.tempC2[i] != txt1.charAt(i)) {
       disp.tempC2[i] = txt1.charAt(i);
-      TFTdisp.fillRect (43+(i*12), 46, 12, 15, BLACK);
-      TFTdisp.setCursor (44+(i*12), 47);
+      TFTdisp.fillRect (MTEMPC_XPOS+(i*12)-1, MTEMPC_YPOS-1, 12, 15, BLACK);
+      TFTdisp.setCursor (MTEMPC_XPOS+(i*12), MTEMPC_YPOS);
       TFTdisp.print (disp.tempC1[i]);
     }
   }
   if (disp.tempC2[3] != txt2.charAt(0)) {
     disp.tempC2[3] = txt2.charAt(0);
-    TFTdisp.fillRect (87, 46, 12, 15, BLACK);
-    TFTdisp.setCursor (88, 47);
+    TFTdisp.fillRect (MTEMPC_XPOS+43, MTEMPC_YPOS-1, 12, 15, BLACK);
+    TFTdisp.setCursor (MTEMPC_XPOS+44, MTEMPC_YPOS);
     TFTdisp.print (disp.tempC2[3]);
   }
-  TFTdisp.fillCircle (130, 54, 5, color);
-}
-
-void drawHoldTempC (uint16_t tempC) {
-  TFTdisp.setTextScale(2);
-  String txt1 = "   " + String(tempC/10);
-  txt1 = txt1.substring(txt1.length() - 3);
-  String txt2 = String(tempC%10);
-  
-  for (uint8_t i=0; i<3; i++) {
-    if (disp.tempC2[i] != txt1.charAt(i)) {
-      disp.tempC2[i] = txt1.charAt(i);
-      TFTdisp.fillRect (43+(i*12), 46, 12, 15, BLACK);
-      TFTdisp.setCursor (44+(i*12), 47);
-      TFTdisp.print (disp.tempC1[i]);
-    }
-  }
-  if (disp.tempC2[3] != txt2.charAt(0)) {
-    disp.tempC2[3] = txt2.charAt(0);
-    TFTdisp.fillRect (87, 46, 12, 15, BLACK);
-    TFTdisp.setCursor (88, 47);
-    TFTdisp.print (disp.tempC2[3]);
-  }
-  if ((data.state & 0x20) == 0) TFTdisp.fillCircle (130, 54, 5, RED);
+  TFTdisp.fillCircle (SCAN_XPOS, SCAN_YPOS, 5, color);
+  TFTdisp.setTextScale(1);
 }
 
 void turnoff_TFT (void) { TFTdisp.backlight (true); }

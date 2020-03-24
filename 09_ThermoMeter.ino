@@ -21,14 +21,16 @@ struct Sensor_type {
 
 struct disp_type {
   char tempC1[4] = {' ','-','-','-'};
-  char tempC2[4] = {' ',' ',' ',' '};
+  char tempC2[4] = {' ','-','-','-'};
   uint32_t timer = 0;
 } disp;
 
 struct sys_type {
+  uint8_t Battlvl = 0;            // % battery. 0:<3v, 1:3.0..3.1v, 2:3.1..3.2, 3:3.2v
   uint8_t E[2] = {1,2};
   uint8_t Eidx = 0;
   uint32_t readSensorTime = 0;
+  uint32_t battTimer = 0;
 } sys;
 
 volatile uint8_t state = 0x00;
@@ -41,22 +43,28 @@ void setup() {
   init_TFT (); drawMainScreen(); drawEvalue();
   Serial.println ("[SYSTEM] Init ok. E="+String(sys.E[sys.Eidx]));
   Init_Sensor();
+  getBatt(); drawBattvalue();
   if ((data.state & 0x07) == 0x01) Serial.println ("[Sensor] Init ok");
   else Serial.println ("[Sensor] Init error");
   sys.readSensorTime = millis();
+  sys.battTimer = millis();
   disp.timer = millis();
 }
 
 void loop() {
   scanButton();
   Sensor_Handling();
+  if ((millis() - sys.battTimer) > 60000L) {
+    getBatt(); drawBattvalue();
+    sys.battTimer = millis();
+  }
   if ((millis() - sys.readSensorTime) > 500L) {
     readSensorData();
     drawTempC ();
     sys.readSensorTime = millis();
     if (data.state & 0x80) {                // long Press
       if ((data.state & 0x40) == 0x00) {
-        initdrawMeasureTempC ();
+        ClrdrawMeasureTempC ();
         data.avgTidx &= 0xF8;               // reset avgTidx
         data.state |= 0x40;                 // set measuring flag
         for (uint8_t i=0; i<5; i++) data.avgT[i] = 0;
@@ -76,29 +84,18 @@ void loop() {
       if ((data.avgTidx & 0x07) > 0x04) data.avgTidx &= 0xF8;
     } else {                                // key Up
       if (data.state & 0x40) {
+        getBatt(); drawBattvalue();
+        sys.battTimer = millis();
         data.state &= 0xBF;
-        drawHoldTempC (data.avgTval);
+        drawMeasureTempC (data.avgTval, ((data.state & 0x20) == 0)?RED:GREEN);
       }
     }
   }
-  if ((disp.timer > 0) && ((millis() - disp.timer) > 10000L)) {
+  if ((disp.timer > 0) && ((millis() - disp.timer) > 1000000L)) {
     disp.timer = 0;
     ClrdrawMeasureTempC ();
     sleep();
   }
-}
-
-bool avgTempC (void) {
-  uint16_t minVal = data.avgT[0], maxVal = 0;
-  data.avgTval = 0;
-  for (uint8_t i=0; i<5; i++) {
-    data.avgTval += data.avgT[i];
-    if (data.avgT[i] < minVal) minVal = data.avgT[i];
-    if (data.avgT[i] > maxVal) maxVal = data.avgT[i];
-  }
-  data.avgTval /= 5;
-  if ((maxVal - minVal) < 5) return true;
-  return false;
 }
 
 void sleep(void) {

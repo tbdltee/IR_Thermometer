@@ -34,14 +34,14 @@ void Button_multiClick(uint8_t clickCount) {
 }
 
 void Button_longPress(uint8_t clickCount) {
-  if (clickCount == 1) data.state |= 0x80;
+  if (clickCount == 1) data.state |= 0x90;
 }
 
 void Button_keyDown(void) {
   if ((data.state & 0x07) == 0x01) WakeUpSensor();
 }
 
-void Button_keyUp(void) {     // run this function when key Up
+void Button_keyUp(void) {
   data.state &= 0x7F;
 }
 
