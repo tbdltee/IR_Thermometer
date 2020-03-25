@@ -1,16 +1,17 @@
-#define BUZZER_PIN              5
+//#define BUZZER_PIN              5   // buzzer pin, active HIGH
 
-#include <avr/interrupt.h>      // library for interrupts handling
-#include <avr/sleep.h>          // library for sleep
-#include <avr/power.h>          // library for power control
+#include <avr/interrupt.h>
+#include <avr/sleep.h>
+#include <avr/power.h>
 
-#include <TFT_ST7735.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
 #include <I2C.h>
 #include <SHT31_I2C.h>
 SHT31 mysht31;
 
 struct Sensor_type {
-  uint8_t   state   = 0x00;       // 0Babcd 0zzz  a:keyDn, b:measuring, c: result green, d:E change allow, z:sensor state (0:init/1:sleep/2:wakeup/3:ready/4:sleep req
+  uint8_t   state   = 0x00;       // 0Babcd 0zzz  a:keyDn, b:start measure, c: measure complete, d:E change allow, z:sensor state (0:init/1:sleep/2:wakeup/3:ready/4:sleep req
   uint16_t  T       = 0xFFFF;     // tempC x10
   uint16_t  rh      = 0xFFFF;     // rh x10
   uint16_t avgT[5]  = {0,0,0,0,0};
@@ -37,8 +38,10 @@ volatile uint8_t state = 0x00;
 
 void setup() {
   Serial.begin (57600);
+#ifdef BUZZER_PIN
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+#endif
   init_Button ();
   init_TFT (); drawMainScreen(); drawEvalue();
   Serial.println ("[SYSTEM] Init ok. E="+String(sys.E[sys.Eidx]));
@@ -63,21 +66,23 @@ void loop() {
     drawTempC ();
     sys.readSensorTime = millis();
     if (data.state & 0x80) {                // long Press
-      if ((data.state & 0x40) == 0x00) {
+      if ((data.state & 0x40) == 0x00) {    // start measuring
         ClrdrawMeasureTempC ();
         data.avgTidx &= 0xF8;               // reset avgTidx
         data.state |= 0x40;                 // set measuring flag
         for (uint8_t i=0; i<5; i++) data.avgT[i] = 0;
       }
       data.avgT[data.avgTidx & 0x07] = data.T;
-      if (avgTempC()) {
-        drawMeasureTempC (data.T, GREEN);
-        if ((data.state & 0x20) == 0) {
-          analogWrite(BUZZER_PIN, 220); delay (100); digitalWrite(BUZZER_PIN, LOW);
+      if (avgTempC()) {                     // result OK
+        drawMeasureTempC (data.T, 1);
+        if ((data.state & 0x20) == 0) {     // 1st time measurement complete
+#ifdef BUZZER_PIN
+            analogWrite(BUZZER_PIN, 220); delay (100); digitalWrite(BUZZER_PIN, LOW);
+#endif
         }
         data.state |= 0x20;                 // measurement completed
-      } else {
-        drawMeasureTempC (data.T, YELLOW);
+      } else {                              // result not OK
+        drawMeasureTempC (data.T, 2);
         data.state &= 0xDF;                 // clear measurement completed flag
       }
       data.avgTidx++;
@@ -87,7 +92,7 @@ void loop() {
         getBatt(); drawBattvalue();
         sys.battTimer = millis();
         data.state &= 0xBF;
-        drawMeasureTempC (data.avgTval, ((data.state & 0x20) == 0)?RED:GREEN);
+        drawMeasureTempC (data.avgTval, ((data.state & 0x20) == 0)?0:1);
       }
     }
   }
@@ -95,6 +100,11 @@ void loop() {
     disp.timer = 0;
     ClrdrawMeasureTempC ();
     sleep();
+  }
+  if ((data.state & 0x60) == 0x40) {        // measuring state
+    if ((millis() - sys.readSensorTime) > 200L) {   // clear measuring text
+      drawMeasureCondition(0);
+    }
   }
 }
 
