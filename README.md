@@ -1,5 +1,5 @@
 # ContaclessThermometer
-GY-906 Contactless Thermometer using Arduino Pro Mini 3.3v 8MHz
+Intrared Contactless Thermometer using GY-906 for Arduino Pro Mini 3.3v 8MHz
 
 ## Release History
 * 0001

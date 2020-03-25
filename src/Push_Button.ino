@@ -48,7 +48,7 @@ void Button_keyUp(void) {
 void scanButton(void) {
   uint8_t reading, i;
   reading = (digitalRead(buttonPin) == LOW)? 0x00: 0x10;           // read the state of the switch into a local variable:
-  if (reading == 0x00) disp.timer = millis();
+  if (reading == 0x00) sys.tftTimer = millis();
   if (reading != (btn.ButtonState&0x10)) btn.prevDebounceTime = millis();   // reset the debouncing timer if state change
   btn.ButtonState &= 0xEF; btn.ButtonState |= reading;
   if ((millis() - btn.prevDebounceTime) > debounceDelay) {            // if state change is stable (key press more than dbounceDelay time

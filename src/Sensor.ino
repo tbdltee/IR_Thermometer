@@ -1,8 +1,10 @@
 void Init_Sensor(void) {
-  mysht31.I2CAddress = 0x44;
-  mysht31.begin();
   data.state &= 0xF8;
-  if (mysht31.ready == 1) SleepSensor();
+  if (mysht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
+    SleepSensor();
+  } else {
+    Serial.println("Couldn't find SHT31");
+  }
 }
 
 void Sensor_Handling (void) {
@@ -26,7 +28,6 @@ void Sensor_Handling (void) {
 
 void WakeUpSensor(void) {      // wakeup request
   // wakeup command
-  mysht31.reset();
   data.state &= 0xF8; data.state |= 0x02;
   data.timer = millis();
 }
@@ -40,14 +41,12 @@ void SleepSensor(void) {      // sleep sensor
 void readSensorData(void) {
   data.T = 0xFFFF; data.rh = 0xFFFF;
   if ((data.state & 0x07) == 0x03) {
-    float TempC = 0, RH = 0;
-    mysht31.getData (TempC, RH);
-    if (mysht31.ready == 1) {
-      if (isnan(TempC)) data.T = 0xFFFF; 
-      else data.T = (uint16_t)(TempC * 10);
-      if (isnan(RH)) data.rh = 0xFFFF;
-      else data.rh = (uint16_t)(RH * 10);
-    }
+    float TempC = mysht31.readTemperature();
+    float RH = mysht31.readHumidity();
+    if (isnan(TempC)) data.T = 0xFFFF; 
+    else data.T = (uint16_t)(TempC * 10);
+    if (isnan(RH)) data.rh = 0xFFFF;
+    else data.rh = (uint16_t)(RH * 10);
   }
 }
 

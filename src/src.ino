@@ -5,10 +5,10 @@
 #include <avr/power.h>
 
 #include <Adafruit_GFX.h>
-#include <Adafruit_ST7735.h>
-#include <I2C.h>
-#include <SHT31_I2C.h>
-SHT31 mysht31;
+#include <Adafruit_SSD1306.h>
+
+#include "Adafruit_SHT31.h"
+Adafruit_SHT31 mysht31 = Adafruit_SHT31();
 
 struct Sensor_type {
   uint8_t   state   = 0x00;       // 0Babcd 0zzz  a:keyDn, b:start measure, c: measure complete, d:E change allow, z:sensor state (0:init/1:sleep/2:wakeup/3:ready/4:sleep req
@@ -20,18 +20,13 @@ struct Sensor_type {
   uint32_t timer    = 0;          // general sensor timer
 } data;
 
-struct disp_type {
-  char tempC1[4] = {' ','-','-','-'};
-  char tempC2[4] = {' ','-','-','-'};
-  uint32_t timer = 0;
-} disp;
-
 struct sys_type {
   uint8_t Battlvl = 0;            // % battery. 0:<3v, 1:3.0..3.1v, 2:3.1..3.2, 3:3.2v
   uint8_t E[2] = {1,2};
   uint8_t Eidx = 0;
   uint32_t readSensorTime = 0;
   uint32_t battTimer = 0;
+  uint32_t tftTimer   = 0;          // display timer
 } sys;
 
 volatile uint8_t state = 0x00;
@@ -51,7 +46,7 @@ void setup() {
   else Serial.println ("[Sensor] Init error");
   sys.readSensorTime = millis();
   sys.battTimer = millis();
-  disp.timer = millis();
+  sys.tftTimer = millis();
 }
 
 void loop() {
@@ -96,14 +91,13 @@ void loop() {
       }
     }
   }
-  if ((disp.timer > 0) && ((millis() - disp.timer) > 1000000L)) {
-    disp.timer = 0;
-    ClrdrawMeasureTempC ();
+  if ((sys.tftTimer > 0) && ((millis() - sys.tftTimer) > 10000L)) {
+    sys.tftTimer = 0;
     sleep();
   }
-  if ((data.state & 0x60) == 0x40) {        // measuring state
+  if ((data.state & 0x60) == 0x40) {                // measuring state
     if ((millis() - sys.readSensorTime) > 200L) {   // clear measuring text
-      drawMeasureCondition(0);
+      ClrdrawMeasureTempC();
     }
   }
 }
